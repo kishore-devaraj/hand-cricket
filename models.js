@@ -32,9 +32,11 @@ function HandCricket(teamOneName) {
     this.bowlingTeam = null
 }
 HandCricket.prototype.didMatchEnded = function () {
-    if (!(this.battingTeam.remainingBalls < 6 && this.bowlingTeam.remainingBalls < 6)) return false
-    else if (this.battingTeam.score > this.bowlingTeam.score) return true
-    else return false
+    if (this.battingTeam.remainingBalls >= 6 || this.bowlingTeam.remainingBalls >= 6) return false
+    else {
+        if (this.battingTeam.score > this.bowlingTeam.score) return true
+        else return false
+    }
 }
 
 HandCricket.prototype.getWinner = function () {
@@ -59,9 +61,6 @@ HandCricket.prototype.toss = function () {
 HandCricket.prototype.getComputerNumber = function () {
     return Math.floor(Math.random() * Math.floor(6)) + 1
 }
-
-
-
 
 module.exports = {
     Player,

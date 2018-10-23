@@ -27,15 +27,16 @@ if (handCricket.tossWon) {
 
 
 let playCricket = true
+let matchEnded = false
 while (playCricket) {
     console.log('*****************************************************************')
     console.log(`${handCricket.battingTeam.teamName} is Batting!`)
-    // console.log(`${handCricket.battingTeam}`)
-    // console.log(typeof handCricket.battingTeam.remainingBalls)
+    const pronounToDisplay = handCricket.battingTeam === handCricket.teamOne ? 'Your' : 'Computer'
 
+    // Getting user input for 6 balls until he gets 'OUT'
     while (handCricket.battingTeam.remainingBalls !== 0) {
         console.log(`${handCricket.battingTeam.remainingBalls} balls remaining`)
-        console.log(`Score: ${handCricket.battingTeam.score}`)
+        console.log(`${pronounToDisplay}'s score: ${handCricket.battingTeam.score}`)
         const userInput = getInputFromUser()
         if (handCricket.check(userInput)) {
             handCricket.battingTeam === handCricket.teamOne ? console.log('You are OUT!')
@@ -53,15 +54,17 @@ while (playCricket) {
             const winner = handCricket.getWinner()
             if (!winner) console.log('It\'s is Tie')
             else console.log(`${winner.teamName} is Winner!`)
+            matchEnded = true
+            break
         }
     }
 
     console.log(`${handCricket.battingTeam.teamName}\'s Final Score: ${handCricket.battingTeam.score}`)
     handCricket.battingTeam = handCricket.battingTeam === handCricket.teamOne ? handCricket.teamTwo : handCricket.teamOne
-    handCricket.battingTeam = handCricket.battingTeam === handCricket.teamOne ? handCricket.teamOne : handCricket.teamTwo
+    handCricket.bowlingTeam = handCricket.bowlingTeam === handCricket.teamOne ? handCricket.teamTwo : handCricket.teamOne
 
     playCricket = handCricket.teamOne.remainingBalls === 0 && handCricket.teamTwo.remainingBalls === 0 ?
-        false : true
+        false : matchEnded === true ? false : true
 }
 
 
