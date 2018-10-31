@@ -1,69 +1,78 @@
 'use strict'
 
-const readlineSync = require('readline-sync')
-
-function Player(name) {
-    this.name = name
-    this.score = 0
-    this.ballsFaced = 0
+function Team (name, rounds) {
+  this.teamName = name
+  this.rounds = Math.floor(rounds / 2)
+  this.score = 0
+  this.finalScore = 0
+  this.currentNumber = 0
+  this.remainingBalls = 0
 }
 
-function Team(teamName, teamSize) {
-    this.teamName = teamName
-    this.score = 0
-    this.currentNumber = 0
-    this.totalPlayers = teamSize
-    this.remainingBalls = 6
-    this.players = new Array(this.totalPlayers)
-}
-
-Team.prototype.teamChooseTo = function () {
-    const options = ['Batting', 'Bowling']
-    this.currentStatus = options[Math.floor(Math.random() * options.length)]
-    return this.currentStatus
-}
-
-function HandCricket(teamOneName) {
-    this.teamOne = new Team(teamOneName, 1)
-    this.teamTwo = new Team('Computer Team', 1)
-    this.teamOneScore = 0
-    this.teamTwoScore = 0
-    this.battingTeam = null
-    this.bowlingTeam = null
-}
-HandCricket.prototype.didMatchEnded = function () {
-    if (this.battingTeam.remainingBalls >= 6 || this.bowlingTeam.remainingBalls >= 6) return false
-    else {
-        if (this.battingTeam.score > this.bowlingTeam.score) return true
-        else return false
-    }
-}
-
-HandCricket.prototype.getWinner = function () {
-    if (this.battingTeam.score === this.bowlingTeam.score) return false
-    else {
-        if (this.battingTeam.score > this.bowlingTeam.score) return this.battingTeam
-        else return this.bowlingTeam
-    }
-}
-
-HandCricket.prototype.check = function (number) {
-    const computerNumber = this.getComputerNumber()
-    console.log('Computer number is ' + computerNumber)
-    this.teamTwo.currentNumber = computerNumber
-    return computerNumber === number
+function HandCricket (rounds) {
+  this.teamOne = new Team('A', rounds)
+  this.teamTwo = new Team('B', rounds)
+  this.rounds = rounds
+  this.battingTeam = null
+  this.bowlingTeam = null
+  this.observers = []
 }
 
 HandCricket.prototype.toss = function () {
-    return Math.floor(Math.random() * Math.floor(2))
+  return Math.floor(Math.random() * Math.floor(2)) === 0 ? this.teamOne : this.teamTwo
 }
 
 HandCricket.prototype.getComputerNumber = function () {
-    return Math.floor(Math.random() * Math.floor(6)) + 1
+  const allowThrows = [0, 1, 2, 3, 4, 6]
+  return allowThrows[Math.floor(Math.random() * Math.floor(6))]
 }
 
+HandCricket.prototype.getRandom = function (number) {
+  this.battingTeam.currentNumber = this.getComputerNumber()
+  this.bowlingTeam.currentNumber = this.getComputerNumber()
+}
+
+HandCricket.prototype.check = function () {
+  if(this.battingTeam.currentNumber === this.bowlingTeam.currentNumber) {
+    // The team is out
+    this.battingTeam.remainingBalls = 0
+    this.battingTeam.rounds -= 1
+    this.battingTeam.finalScore = this.battingTeam.score
+    this.battingTeam.score = 'Out'
+  } else {
+    this.battingTeam.score += this.battingTeam.currentNumber
+    this.battingTeam.remainingBalls -= 1
+  }
+}
+
+HandCricket.prototype.throws = function () {
+  this.getRandom()
+  this.check()
+}
+
+HandCricket.prototype.getWinner = function () {
+  if (this.battingTeam.finalScore === this.bowlingTeam.finalScore) return false // tie
+  else {
+      if (this.battingTeam.finalScore > this.bowlingTeam.finalScore) return this.battingTeam // Batting Team is winner
+      else return this.bowlingTeam // Bowling Team is winner
+  }
+}
+
+HandCricket.prototype.didMatchEnded = function () {
+  if (this.battingTeam.remainingBalls >= 6 || this.bowlingTeam.remainingBalls >= 6) return false
+  else {
+      if (this.battingTeam.score > this.bowlingTeam.score) return true
+      else return false
+  }
+}
+
+HandCricket.prototype.broadcastCurrentState = function (state) {
+  this.observers.map( observer => {
+    observer(state)
+  })
+}
+
+
 module.exports = {
-    Player,
-    Team,
-    HandCricket
+  HandCricket
 }

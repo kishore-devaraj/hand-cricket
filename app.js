@@ -1,91 +1,55 @@
-'use strict'
-const readlineSync = require('readline-sync')
-const { Player, Team, HandCricket } = require('./models')
+const { HandCricket } = require('./models')
 
-const handCricket = new HandCricket('Player Team')
-const toss = Number(readlineSync.question('Toss time! Choose either 0 or 1: '))
+let rounds = 2
+const handCricket = new HandCricket(rounds)
 
-if (!isInputValid(toss)) return
-handCricket.tossWon = handCricket.toss() === toss ? true : false
-if (handCricket.tossWon) {
-    console.log('Toss Won')
-    let chooseTo = Number(readlineSync.question('\'Batting\' or \'Bowling\' ? Choose either 0 or 1: '))
+// Adding the observers to the broadcaster
+handCricket.observers.push(consoleOutput)
+// handCricket.observers.push(streamScoreToApi)
+// handCricket.observers.push(addItToDb)
 
-    if (!isInputValid(chooseTo)) return
-    chooseTo = chooseTo === 0 ? 'Batting' : 'Bowling'
-    handCricket.battingTeam = chooseTo === 'Batting' ? handCricket.teamOne : handCricket.teamTwo
-    handCricket.bowlingTeam = chooseTo === 'Batting' ? handCricket.teamTwo : handCricket.teamOne
+handCricket.battingTeam = handCricket.toss()
+const battingTeamName = handCricket.battingTeam.teamName
+handCricket.bowlingTeam = battingTeamName === 'A' ? handCricket.teamTwo : handCricket.teamOne
 
-    console.log('You have chosen to ' + chooseTo)
+handCricket.broadcastCurrentState(`Who bats first? ${battingTeamName}`)
+
+let currentRound = 1
+
+while(currentRound <= rounds) {
+  handCricket.battingTeam.remainingBalls = 6
+  handCricket.battingTeam.score = 0
+  handCricket.broadcastCurrentState(`Round ${currentRound}: ${handCricket.battingTeam.teamName} is batting`)
+  while(handCricket.battingTeam.remainingBalls !== 0) {
+    handCricket.throws()
+    handCricket.broadcastCurrentState(`A throws ${handCricket.battingTeam.currentNumber}, 
+    B throws ${handCricket.bowlingTeam.currentNumber}.
+    ${handCricket.battingTeam.teamName}'s score is ${handCricket.battingTeam.score}`)
+  }
+  // Swapping the batting and bowling teams
+  handCricket.battingTeam = handCricket.battingTeam === handCricket.teamOne ? handCricket.teamTwo : handCricket.teamOne 
+  handCricket.bowlingTeam = handCricket.bowlingTeam === handCricket.teamOne ? handCricket.teamTwo : handCricket.teamOne
+  currentRound += 1
+}
+
+const gameWinnerName = handCricket.getWinner()
+if(gameWinnerName === false) {
+  handCricket.broadcastCurrentState(`It's a tie`)
 } else {
-    console.log('Toss Lost')
-    const computerChooseTo = handCricket.teamTwo.teamChooseTo()
-    handCricket.battingTeam = computerChooseTo === 'Batting' ? handCricket.teamTwo : handCricket.teamOne
-    handCricket.bowlingTeam = computerChooseTo === 'Batting' ? handCricket.teamOne : handCricket.teamTwo
-    console.log('Computer choose to: ' + computerChooseTo)
+  handCricket.broadcastCurrentState(`Game Winner is ${gameWinnerName.teamName}`)
 }
 
-
-let playCricket = true
-let matchEnded = false
-while (playCricket) {
-    console.log('*****************************************************************')
-    console.log(`${handCricket.battingTeam.teamName} is Batting!`)
-    const pronounToDisplay = handCricket.battingTeam === handCricket.teamOne ? 'Your' : 'Computer'
-
-    // Getting user input for 6 balls until he gets 'OUT'
-    while (handCricket.battingTeam.remainingBalls !== 0) {
-        console.log(`${handCricket.battingTeam.remainingBalls} balls remaining`)
-        console.log(`${pronounToDisplay}'s score: ${handCricket.battingTeam.score}`)
-        const userInput = getInputFromUser()
-        if (handCricket.check(userInput)) {
-            handCricket.battingTeam === handCricket.teamOne ? console.log('You are OUT!')
-                : console.log('You have taken the wicket')
-            handCricket.battingTeam.remainingBalls = 0
-            break
-        } else {
-            const score = userInput + handCricket.teamTwo.currentNumber
-            handCricket.battingTeam.score += score
-            handCricket.battingTeam.remainingBalls = handCricket.battingTeam.remainingBalls - 1
-        }
-
-        // Checking whether the match is ended and declaring the winner
-        if (handCricket.didMatchEnded()) {
-            const winner = handCricket.getWinner()
-            if (!winner) console.log('It\'s is Tie')
-            else console.log(`${winner.teamName} is Winner!`)
-            matchEnded = true
-            break
-        }
-    }
-
-    console.log(`${handCricket.battingTeam.teamName}\'s Final Score: ${handCricket.battingTeam.score}`)
-    handCricket.battingTeam = handCricket.battingTeam === handCricket.teamOne ? handCricket.teamTwo : handCricket.teamOne
-    handCricket.bowlingTeam = handCricket.bowlingTeam === handCricket.teamOne ? handCricket.teamTwo : handCricket.teamOne
-
-    playCricket = handCricket.teamOne.remainingBalls === 0 && handCricket.teamTwo.remainingBalls === 0 ?
-        false : matchEnded === true ? false : true
+// Output Observers
+function consoleOutput (outputToBeConsoled) {
+  console.log(outputToBeConsoled)
 }
 
-
-
-// Helper function
-function isInputValid(input) {
-    if (input !== 1 && input !== 0) {
-        console.log('Wrong Input. It should be called either 0 or 1')
-        return false
-    }
-    return true
+function streamScoreToApi (outputToBeConsoled) {
+  // Do the necessary
+  console.log(`In Streaming ${outputToBeConsoled}`)
 }
 
-function getInputFromUser() {
-    const input = Number(readlineSync.question('Enter the number from 1 - 6? :'))
-    if ([1, 2, 3, 4, 5, 6].indexOf(input) !== -1) {
-        return input
-    } else {
-        console.log('Invalid input, Try again')
-        getInputFromUser()
-    }
+function addItToDb (outputToBeConsoled) {
+  // Do the necessary
+  console.log(`Adding it to db ${outputToBeConsoled}`)
 }
-
-
